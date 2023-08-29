@@ -26,14 +26,14 @@ Series "The Itchy and Scratchy Show" has duplicates:
   - 1990-10-11T20:09:22-04:00: \\disk\shows\The Itchy and Scratchy Show\Season 01\the.itchy.and.scratchy.show.s01e04.1080p.web-dl.h264-elbarto.mkv
 Series "Single Female Lawyer" has duplicates:
   Single Female Lawyer S01E01
-  - 1999-11-07T20:00:05-05:00: \\disk\shows\Single Female Laywer\Season 01\Single.Female.Lawyer.S01E01.480p.NTSC.h264-LRRR.mkv
-  - 2000-01-22T14:17:06-05:00: \\disk\shows\Single Female Laywer\Single.Female.Lawyer.S01.480p.NTSC.h264-LRRR\Single.Female.Lawyer.S01E01.480p.NTSC.h264-LRRR.mkv
+  - 1999-11-07T20:00:05-05:00: \\disk\shows\Single Female Lawyer\Season 01\Single.Female.Lawyer.S01E01.480p.NTSC.h264-LRRR.mkv
+  - 2000-01-22T14:17:06-05:00: \\disk\shows\Single Female Lawyer\Single.Female.Lawyer.S01.480p.NTSC.h264-LRRR\Single.Female.Lawyer.S01E01.480p.NTSC.h264-LRRR.mkv
   Single Female Lawyer S01E02
-  - 1999-11-14T20:04:30-05:00: \\disk\shows\Single Female Laywer\Season 01\Single.Female.Lawyer.S01E02.480p.NTSC.h264-LRRR.mkv
-  - 2000-01-22T14:17:06-05:00: \\disk\shows\Single Female Laywer\Single.Female.Lawyer.S01.480p.NTSC.h264-LRRR\Single.Female.Lawyer.S01E02.480p.NTSC.h264-LRRR.mkv
+  - 1999-11-14T20:04:30-05:00: \\disk\shows\Single Female Lawyer\Season 01\Single.Female.Lawyer.S01E02.480p.NTSC.h264-LRRR.mkv
+  - 2000-01-22T14:17:06-05:00: \\disk\shows\Single Female Lawyer\Single.Female.Lawyer.S01.480p.NTSC.h264-LRRR\Single.Female.Lawyer.S01E02.480p.NTSC.h264-LRRR.mkv
   Single Female Lawyer S01E03
-  - 1999-11-21T19:48:50-05:00: \\disk\shows\Single Female Laywer\Season 01\Single.Female.Lawyer.S01E03.480p.NTSC.h264-LRRR.mkv
-  - 2000-01-22T14:17:06-05:00: \\disk\shows\Single Female Laywer\Single.Female.Lawyer.S01.480p.NTSC.h264-LRRR\Single.Female.Lawyer.S01E03.480p.NTSC.h264-LRRR.mkv
+  - 1999-11-21T19:48:50-05:00: \\disk\shows\Single Female Lawyer\Season 01\Single.Female.Lawyer.S01E03.480p.NTSC.h264-LRRR.mkv
+  - 2000-01-22T14:17:06-05:00: \\disk\shows\Single Female Lawyer\Single.Female.Lawyer.S01.480p.NTSC.h264-LRRR\Single.Female.Lawyer.S01E03.480p.NTSC.h264-LRRR.mkv
 ```
 
 ## Configuration

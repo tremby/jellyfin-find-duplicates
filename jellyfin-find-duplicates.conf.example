@@ -1,0 +1,23 @@
+# Configuration for the jellyfin-find-duplicates script.
+# https://github.com/tremby/jellyfin-find-duplicates
+#
+# This is a regular bash script.
+#
+# If saved to $XDG_CONFIG_HOME/jellyfin-find-duplicates.conf
+# it's included at the start of the script via bash's "." (source) command.
+#
+# Any of the variables can be commented out,
+# or the file doesn't need to exist,
+# if they will be provided by other means.
+
+# Jellyfin URL scheme and hostname (no trailing slash)
+JELLYFIN_HOST=https://jellyfin.local
+
+# Jellyfin API token (Jellyfin -> dashboard -> advanced -> API keys)
+JELLYFIN_TOKEN=0123456789abcdef0123456789abcdef
+
+# Jellyfin user name
+JELLYFIN_USER=myjellyfinusername
+
+# TV shows library name
+JELLYFIN_SHOWS_LIB_NAME=Shows

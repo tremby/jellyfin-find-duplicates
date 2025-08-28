@@ -5,9 +5,12 @@
 #
 # If saved to $XDG_CONFIG_HOME/jellyfin-find-duplicates.conf
 # it's included at the start of the script via bash's "." (source) command.
-#
-# Any of the variables can be commented out,
-# or the file doesn't need to exist,
+
+# Required variables
+# ------------------
+
+# Any of these variables can be commented out,
+# or the file doesn't need to exist at all,
 # if they will be provided by other means.
 
 # Jellyfin URL scheme and hostname (no trailing slash)
@@ -21,3 +24,11 @@ JELLYFIN_USER=myjellyfinusername
 
 # TV shows library name
 JELLYFIN_SHOWS_LIB_NAME=Shows
+
+# Optional variables
+# ------------------
+
+# Any of these variables can be commented out or blank if unneeded.
+
+# File paths to ignore, separated by double colons
+IGNORED_PATHS="/media/shows/Great Show/Great Show S01/Great Show S01E01 (original pilot).mkv"::"/media/shows/Other/Other S02/Other S02E14 (censored version).mkv"

@@ -66,6 +66,19 @@ The following variables are then expected to exist:
   The name of the TV shows library in Jellyfin.
   Example: `Shows`
 
+The following are optional:
+
+- `IGNORED_PATHS`:
+  Any paths to files which are known wanted duplicates,
+  separated by double colons (`::`).
+  For example, if there are two versions of an episode, one can be ignored:
+  `/path/to/episode (duplicate version).mkv`.
+  If there are multiple, ignore all but one:
+  `/path/to/episode (version 2).mkv::/path/to/episode (version 3).mkv`.
+  Paths are Jellyfin's full media paths, as reported in this script's output
+  when duplicates are found.
+
+
 ## Dependencies
 
 - `curl`, which you probably have. If not, it is in every package manager.

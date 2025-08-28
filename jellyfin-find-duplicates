@@ -105,7 +105,7 @@ LIB_ID=$(req /Library/MediaFolders | jq --raw-output ".Items[] | select(.Name==\
 SERIES_IDS=$(req "/Items?isSeries=true&userId=$USER_ID&parentId=$LIB_ID" | jq --raw-output '.Items[] | .Id')
 
 for SERIES_ID in $SERIES_IDS; do
-	DUPLICATES_JSON="$(req "/Shows/$SERIES_ID/Episodes?userId=$USER_ID&fields=DateCreated,Path" | jq '.Items | group_by([.ParentIndexNumber, .IndexNumber]) | map(select(length > 1))')"
+	DUPLICATES_JSON="$(req "/Shows/$SERIES_ID/Episodes?userId=$USER_ID&fields=DateCreated,Path" | jq --arg ignored_paths "$IGNORED_PATHS" '.Items | map(select(.Path as $path | ($ignored_paths | split("::") | index($path)) == null)) | group_by([.ParentIndexNumber, .IndexNumber]) | map(select(length > 1))')"
 	if [ "$DUPLICATES_JSON" = "[]" ]; then
 		continue
 	fi

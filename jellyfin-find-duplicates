@@ -109,7 +109,7 @@ for SERIES_ID in $SERIES_IDS; do
 	if [ "$DUPLICATES_JSON" = "[]" ]; then
 		continue
 	fi
-	SERIES_NAME="$(echo "$DUPLICATES_JSON" | jq --raw-output '.[0] | .[0].SeriesName')"
+	SERIES_NAME="$(echo "$DUPLICATES_JSON" | jq --raw-output '.[0][0].SeriesName')"
 	echo "Series \"$SERIES_NAME\" has duplicates:"
 	for DUPES_B64 in $(echo "$DUPLICATES_JSON" | jq --raw-output --compact-output '.[] | @base64'); do
 		DUPES="$(echo "$DUPES_B64" | base64 --decode)"

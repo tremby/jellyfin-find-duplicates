@@ -10,6 +10,9 @@ Information is output about any duplicate episodes found.
 If the program exits with no output and a success status,
 no duplicates were found.
 
+Episodes are grouped by season number and episode number if possible,
+otherwise an attempt is made to group by season number and a date string found in the title.
+
 ### Options
 
 - `-h`, `--help`: Show help text

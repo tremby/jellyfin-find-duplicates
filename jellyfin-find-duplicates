@@ -105,17 +105,36 @@ LIB_ID=$(req /Library/MediaFolders | jq --raw-output ".Items[] | select(.Name==\
 SERIES_IDS=$(req "/Items?isSeries=true&userId=$USER_ID&parentId=$LIB_ID" | jq --raw-output '.Items[] | .Id')
 
 for SERIES_ID in $SERIES_IDS; do
-	DUPLICATES_JSON="$(req "/Shows/$SERIES_ID/Episodes?userId=$USER_ID&fields=DateCreated,Path" | jq --arg ignored_paths "$IGNORED_PATHS" '.Items | map(select(.Path as $path | ($ignored_paths | split("::") | index($path)) == null)) | group_by([.ParentIndexNumber, .IndexNumber]) | map(select(length > 1))')"
+	EPISODES_JSON="$(req "/Shows/$SERIES_ID/Episodes?userId=$USER_ID&fields=DateCreated,Path" | jq --arg ignored_paths "$IGNORED_PATHS" '.Items | map(select(.Path as $path | ($ignored_paths | split("::") | index($path)) == null))')"
+	DUPLICATES_JSON="$(echo "$EPISODES_JSON" | jq '. | group_by([.ParentIndexNumber, .IndexNumber]) | map(select(length > 1))')"
 	if [ "$DUPLICATES_JSON" = "[]" ]; then
 		continue
 	fi
+
+	if [ "$(echo "$DUPLICATES_JSON" | jq --raw-output '.[0][0].IndexNumber == null')" = "true" ]; then
+		# There's no episode number; see if it looks like a daily show
+		if [ "$(echo "$DUPLICATES_JSON" | jq --raw-output '.[0][0].Name | test("\\b\\d{4}[.-]\\d{2}[.-]\\d{2}\\b")')" = "true" ]; then
+			# It looks like a daily show. Regroup entries by date found in name.
+			DUPLICATES_JSON="$(echo "$EPISODES_JSON" | jq '. | group_by([.ParentIndexNumber, (.Name | match("\\b\\d{4}[.-]\\d{2}[.-]\\d{2}\\b").string)]) | map(select(length > 1))')"
+			if [ "$DUPLICATES_JSON" = "[]" ]; then
+				continue
+			fi
+		fi
+	fi
+
 	SERIES_NAME="$(echo "$DUPLICATES_JSON" | jq --raw-output '.[0][0].SeriesName')"
 	echo "Series \"$SERIES_NAME\" has duplicates:"
 	for DUPES_B64 in $(echo "$DUPLICATES_JSON" | jq --raw-output --compact-output '.[] | @base64'); do
 		DUPES="$(echo "$DUPES_B64" | base64 --decode)"
 		SEASON_NUM=$(echo "$DUPES" | jq --raw-output '.[0].ParentIndexNumber')
-		EPISODE_NUM=$(echo "$DUPES" | jq --raw-output '.[0].IndexNumber')
-		echo "  $SERIES_NAME S$(printf "%02d" "$SEASON_NUM")E$(printf "%02d" "$EPISODE_NUM")"
+		if [ "$(echo "$DUPES" | jq --raw-output '.[0].IndexNumber == null')" = "true" ]; then
+			EPISODE_DATE="$(echo "$DUPES" | jq --raw-output '.[0].Name | match("\\b\\d{4}[.-]\\d{2}[.-]\\d{2}\\b").string')"
+			IDENTIFIER="S$(printf "%02d" "$SEASON_NUM"): $EPISODE_DATE"
+		else
+			EPISODE_NUM="$(echo "$DUPES" | jq --raw-output '.[0].IndexNumber')"
+			IDENTIFIER="S$(printf "%02d" "$SEASON_NUM")E$(printf "%02d" "$EPISODE_NUM")"
+		fi
+		echo "  $SERIES_NAME $IDENTIFIER"
 		for DUPE_B64 in $(echo "$DUPES" | jq --raw-output --compact-output 'sort_by(.DateCreated)[] | @base64'); do
 			DUPE="$(echo "$DUPE_B64" | base64 --decode)"
 			echo "  - $(date --iso=second --date="$(echo "$DUPE" | jq --raw-output '.DateCreated')"): $(echo "$DUPE" | jq --raw-output '.Path')"

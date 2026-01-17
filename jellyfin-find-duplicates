@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # jellyfin-find-duplicates script
 # https://github.com/tremby/jellyfin-find-duplicates
 

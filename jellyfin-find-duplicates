@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 # jellyfin-find-duplicates script
 # https://github.com/tremby/jellyfin-find-duplicates
 
@@ -126,7 +128,7 @@ for SERIES_ID in $SERIES_IDS; do
 	echo "Series \"$SERIES_NAME\" has duplicates:"
 	for DUPES_B64 in $(echo "$DUPLICATES_JSON" | jq --raw-output --compact-output '.[] | @base64'); do
 		DUPES="$(echo "$DUPES_B64" | base64 --decode)"
-		SEASON_NUM=$(echo "$DUPES" | jq --raw-output '.[0].ParentIndexNumber')
+		SEASON_NUM=$(echo "$DUPES" | jq --raw-output '.[0].ParentIndexNumber // 0')
 		if [ "$(echo "$DUPES" | jq --raw-output '.[0].IndexNumber == null')" = "true" ]; then
 			EPISODE_DATE="$(echo "$DUPES" | jq --raw-output '.[0].Name | match("\\b\\d{4}[.-]\\d{2}[.-]\\d{2}\\b").string')"
 			IDENTIFIER="S$(printf "%02d" "$SEASON_NUM"): $EPISODE_DATE"

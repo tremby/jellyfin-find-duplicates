@@ -16,7 +16,12 @@ If the program exits with no output and a success status, no duplicates were
 found.
 
 Options:
-  -h, --help: Show this help text
+     -h, --help: Show this help text
+  --color=COLOR: Set color mode
+                 COLOR can be any of
+                   - "auto" (default; choose based on whether stdout is a TTY)
+                   - "off"
+                   - "always"
 
 Configuration:
   The file \$XDG_CONFIG_HOME/jellyfin-find-duplicates.conf
@@ -40,12 +45,34 @@ Configuration:
 END
 }
 
+COLORMODE=auto
+
 # Deal with any arguments
 while [ $# -gt 0 ]; do
 	case "$1" in
-		"-h"|"--help")
+		-h|--help)
 			usage
 			exit 0
+			;;
+		--color=*)
+			mode="${1#--color=}"
+			case "$mode" in
+				auto)
+					COLORMODE=auto
+					;;
+				always)
+					COLORMODE=on
+					;;
+				off)
+					COLORMODE=off
+					;;
+				*)
+					echo "Unsupported color mode \"$COLORMODE\"" >&2
+					echo >&2
+					usage >&2
+					exit 65
+					;;
+			esac
 			;;
 		*)
 			echo "Unexpected argument \"$1\"" >&2
@@ -98,14 +125,130 @@ if ! command -v date &>/dev/null; then
 	exit 69
 fi
 
+# Decide on color mode
+if [ "$COLORMODE" = "auto" ]; then
+	if [ -t 1 ]; then
+		COLORMODE=on
+	else
+		COLORMODE=off
+	fi
+fi
+case "$COLORMODE" in
+	on)
+		C_RED="\e[0;31m"
+		C_GREEN="\e[0;32m"
+		C_YELLOW="\e[0;33m"
+		C_BLUE="\e[0;34m"
+		C_MAGENTA="\e[0;35m"
+		C_CYAN="\e[0;36m"
+		C_BRIGHT_RED="\e[1;31m"
+		C_BRIGHT_GREEN="\e[1;32m"
+		C_BRIGHT_YELLOW="\e[1;33m"
+		C_BRIGHT_BLUE="\e[1;34m"
+		C_BRIGHT_MAGENTA="\e[1;35m"
+		C_BRIGHT_CYAN="\e[1;36m"
+		C_RESET="\e[0m"
+		;;
+	off)
+		C_RED=""
+		C_GREEN=""
+		C_YELLOW=""
+		C_BLUE=""
+		C_MAGENTA=""
+		C_CYAN=""
+		C_BRIGHT_RED=""
+		C_BRIGHT_GREEN=""
+		C_BRIGHT_YELLOW=""
+		C_BRIGHT_BLUE=""
+		C_BRIGHT_MAGENTA=""
+		C_BRIGHT_CYAN=""
+		C_RESET=""
+		;;
+esac
+
+# Theme
+C_SERIES="$C_CYAN"
+C_SERIES_NAME="$C_BRIGHT_CYAN"
+C_EPISODE="$C_YELLOW"
+C_EPISODE_ID="$C_BRIGHT_YELLOW"
+C_TIME="$C_MAGENTA"
+C_DIFF="$C_BRIGHT_RED"
+
+# Diffing logic
+declare -a COMMON_SEQUENCES
+
+split_to_tokens() {
+	echo "$1" | sed 's/\([ ._/-]\)/\n\1\n/g'
+}
+
+function compare_strings() {
+	local strings=("$@")
+	local count=${#strings[@]}
+	COMMON_SEQUENCES=()
+
+	if [ "$COLORMODE" = off ]; then
+		return
+	fi
+
+	local -a sequence=()
+	mapfile -t sequence < <(split_to_tokens "${strings[0]}")
+
+	for ((j=1; j<count; j++)); do
+		local -a other=()
+		mapfile -t other < <(split_to_tokens "${strings[$j]}")
+
+		local -a new_sequence=()
+		while IFS= read -r line; do
+			if [[ "$line" == " "* ]]; then
+				new_sequence+=("${line:1}")
+			fi
+		done < <(diff --unified=9999 <(printf "%s\n" "${sequence[@]}") <(printf "%s\n" "${other[@]}") | tail -n +4)
+
+		sequence=("${new_sequence[@]}")
+	done
+
+	COMMON_SEQUENCES=("${sequence[@]}")
+}
+
+render_string_diff() {
+	local s="$1"
+
+	if [ "$COLORMODE" = off ]; then
+		echo "$s"
+		return
+	fi
+
+	local -a tokens=()
+	mapfile -t tokens < <(split_to_tokens "$s")
+	local result=""
+
+	local safe_idx=0
+	local safe_count=${#COMMON_SEQUENCES[@]}
+
+	for ((k=0; k<${#tokens[@]}; k++)); do
+		local tok="${tokens[$k]}"
+		if (( safe_idx < safe_count )) && [[ "$tok" == "${COMMON_SEQUENCES[$safe_idx]}" ]]; then
+			result+="$tok"
+			((safe_idx++))
+		else
+			result+="${C_BRIGHT_RED}${tok}${C_RESET}"
+		fi
+	done
+
+	echo -e "$result"
+}
+
+# API request
 function req() {
 	curl --silent --header "Accept: application/json" --header "Authorization: MediaBrowser Token=\"$JELLYFIN_TOKEN\"" "$JELLYFIN_HOST$1"
 }
 
+# Get user ID and library ID
 USER_ID=$(req /Users | jq --raw-output ".[] | select(.Name==\"$JELLYFIN_USER\") | .Id")
 LIB_ID=$(req /Library/MediaFolders | jq --raw-output ".Items[] | select(.Name==\"$JELLYFIN_SHOWS_LIB_NAME\") | .Id")
-SERIES_IDS=$(req "/Items?isSeries=true&userId=$USER_ID&parentId=$LIB_ID" | jq --raw-output '.Items[] | .Id')
 
+# Loop through series IDs
+SERIES_IDS=$(req "/Items?isSeries=true&userId=$USER_ID&parentId=$LIB_ID" | jq --raw-output '.Items[] | .Id')
 for SERIES_ID in $SERIES_IDS; do
 	EPISODES_JSON="$(req "/Shows/$SERIES_ID/Episodes?userId=$USER_ID&fields=DateCreated,Path" | jq --arg ignored_paths "$IGNORED_PATHS" '.Items | map(select(.Path as $path | ($ignored_paths | split("::") | index($path)) == null))')"
 	DUPLICATES_JSON="$(echo "$EPISODES_JSON" | jq '. | group_by([.ParentIndexNumber, .IndexNumber]) | map(select(length > 1))')"
@@ -125,7 +268,7 @@ for SERIES_ID in $SERIES_IDS; do
 	fi
 
 	SERIES_NAME="$(echo "$DUPLICATES_JSON" | jq --raw-output '.[0][0].SeriesName')"
-	echo "Series \"$SERIES_NAME\" has duplicates:"
+	echo -e "${C_SERIES}Series \"${C_SERIES_NAME}$SERIES_NAME${C_SERIES}\" has duplicates:${C_RESET}"
 	for DUPES_B64 in $(echo "$DUPLICATES_JSON" | jq --raw-output --compact-output '.[] | @base64'); do
 		DUPES="$(echo "$DUPES_B64" | base64 --decode)"
 		SEASON_NUM=$(echo "$DUPES" | jq --raw-output '.[0].ParentIndexNumber // 0')
@@ -136,10 +279,12 @@ for SERIES_ID in $SERIES_IDS; do
 			EPISODE_NUM="$(echo "$DUPES" | jq --raw-output '.[0].IndexNumber')"
 			IDENTIFIER="S$(printf "%02d" "$SEASON_NUM")E$(printf "%02d" "$EPISODE_NUM")"
 		fi
-		echo "  $SERIES_NAME $IDENTIFIER"
+		echo -e "  ${C_EPISODE}$SERIES_NAME ${C_EPISODE_ID}$IDENTIFIER${C_RESET}"
+		mapfile -t PATHS < <(echo "$DUPES" | jq --raw-output --compact-output 'sort_by(.DateCreated)[].Path')
+		compare_strings "${PATHS[@]}"
 		for DUPE_B64 in $(echo "$DUPES" | jq --raw-output --compact-output 'sort_by(.DateCreated)[] | @base64'); do
 			DUPE="$(echo "$DUPE_B64" | base64 --decode)"
-			echo "  - $(date --iso=second --date="$(echo "$DUPE" | jq --raw-output '.DateCreated')"): $(echo "$DUPE" | jq --raw-output '.Path')"
+			echo -e "  - ${C_TIME}$(date --iso=second --date="$(echo "$DUPE" | jq --raw-output '.DateCreated')")${C_RESET}: $(render_string_diff "$(echo "$DUPE" | jq --raw-output '.Path')")"
 		done
 	done
 done

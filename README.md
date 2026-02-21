@@ -16,6 +16,10 @@ otherwise an attempt is made to group by season number and a date string found i
 ### Options
 
 - `-h`, `--help`: Show help text
+- `--color=COLOR`: Set color mode. `COLOR` can be any of
+  - `auto` (default; choose based on whether stdout is a TTY)
+  - `off`
+  - `always`
 
 ### Example output
 

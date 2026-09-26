@@ -2,6 +2,12 @@
 
 Find duplicate TV show episodes in a Jellyfin library.
 
+## Jellyfin version compatibility
+
+The Jellyfin data scheme changed quite significantly with Jellyfin 12.0.
+Current versions of this script support only Jellyfin 12.0+;
+if you're using an older version, use versions 0.4.x of this script.
+
 ## Usage
 
     jellyfin-find-duplicates [-h] [--help]

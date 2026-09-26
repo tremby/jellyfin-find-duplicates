@@ -22,6 +22,7 @@ Options:
                    - "auto" (default; choose based on whether stdout is a TTY)
                    - "off"
                    - "always"
+        --debug: Show debugging output
 
 Configuration:
   The file \$XDG_CONFIG_HOME/jellyfin-find-duplicates.conf
@@ -57,6 +58,7 @@ END
 }
 
 COLORMODE=auto
+DEBUG=false
 
 # Deal with any arguments
 while [ $# -gt 0 ]; do
@@ -85,6 +87,9 @@ while [ $# -gt 0 ]; do
 					;;
 			esac
 			;;
+		--debug)
+			DEBUG=true
+			;;
 		*)
 			echo "Unexpected argument \"$1\"" >&2
 			echo >&2
@@ -94,14 +99,26 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
+function decho() {
+	if $DEBUG; then
+		echo "$@"
+	fi
+}
+
 # Ensure we have an XDG_CONFIG_HOME
 if [ -z "$XDG_CONFIG_HOME" ]; then
 	XDG_CONFIG_HOME="$HOME/.config"
+	decho "Using default XDG_CONFIG_HOME $XDG_CONFIG_HOME"
+else
+	decho "XDG_CONFIG_HOME is $XDG_CONFIG_HOME"
 fi
 
 # Load config from a config file if it exists
 if [ -f "$XDG_CONFIG_HOME/jellyfin-find-duplicates.conf" ]; then
+	decho "Loading config from $XDG_CONFIG_HOME/jellyfin-find-duplicates.conf"
 	. "$XDG_CONFIG_HOME/jellyfin-find-duplicates.conf"
+else
+	decho "No config file found at $XDG_CONFIG_HOME/jellyfin-find-duplicates.conf"
 fi
 
 # Ensure we have the configuration we need
@@ -140,8 +157,10 @@ fi
 if [ "$COLORMODE" = "auto" ]; then
 	if [ -t 1 ]; then
 		COLORMODE=on
+		decho "Color in auto mode and it looks like we're interactive so setting it on"
 	else
 		COLORMODE=off
+		decho "Color in auto mode and it looks like we're not interactive so setting it off"
 	fi
 fi
 case "$COLORMODE" in
@@ -250,20 +269,32 @@ render_string_diff() {
 
 # API request
 function req() {
-	curl --silent --header "Accept: application/json" --header "Authorization: MediaBrowser Token=\"$JELLYFIN_TOKEN\"" "$JELLYFIN_HOST$1"
+	args=(--header "Accept: application/json" --header "Authorization: MediaBrowser Token=\"$JELLYFIN_TOKEN\"" "$JELLYFIN_HOST$1")
+	if $DEBUG; then
+		curl --verbose "${args[@]}"
+	else
+		curl --silent "${args[@]}"
+	fi
 }
 
 # Get user ID and library ID
 USER_ID=$(req /Users | jq --raw-output ".[] | select(.Name==\"$JELLYFIN_USER\") | .Id")
+decho "User ID: $USER_ID"
 LIB_ID=$(req /Library/MediaFolders | jq --raw-output ".Items[] | select(.Name==\"$JELLYFIN_SHOWS_LIB_NAME\") | .Id")
+decho "Library ID: $LIB_ID"
 
 # Loop through series IDs
 SERIES_IDS=$(req "/Items?isSeries=true&userId=$USER_ID&parentId=$LIB_ID" | jq --raw-output '.Items[] | .Id')
+decho "Series IDs: $SERIES_IDS"
+
 for SERIES_ID in $SERIES_IDS; do
+	decho "Working on series $SERIES_ID"
+
 	EPISODES_JSON="$(req "/Shows/$SERIES_ID/Episodes?userId=$USER_ID&fields=MediaSources" | jq --arg ignored_paths "$IGNORED_PATHS" '.Items | map(.MediaSources |= map(select(.Path as $path | ($ignored_paths | split("::") | index($path)) == null)))')"
 	DUPLICATES_JSON="$(echo "$EPISODES_JSON" | jq 'map(select(.MediaSources | length > 1))')"
 
 	if [ "$DUPLICATES_JSON" = "[]" ]; then
+		decho "No duplicates found for series $SERIES_ID"
 		continue
 	fi
 

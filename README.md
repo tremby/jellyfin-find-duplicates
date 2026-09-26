@@ -85,7 +85,6 @@ The following are optional:
   Paths are Jellyfin's full media paths, as reported in this script's output
   when duplicates are found.
 
-
 ## Dependencies
 
 - `curl`, which you probably have. If not, it is in every package manager.
